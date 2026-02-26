@@ -44,8 +44,8 @@ jobs:
 
       - name: Setup Bootstrap
         run: |
-          curl -L -O https://github.com/${{ github.repository }}/releases/download/bootstrap/bootstrap.tar.gz
-          tar -xzpf bootstrap.tar.gz -C /
+          curl -L -O https://github.com/${{ github.repository }}/releases/download/bootstrap/bootstrap-ohos-2025Q4-arm64-20260226.tar.gz
+          tar -xzpf bootstrap-ohos-2025Q4-arm64-20260226.tar.gz -C /
           echo "/storage/Users/currentUser/.pkg/bin:/storage/Users/currentUser/.pkg/sbin" >> $GITHUB_PATH
 
       - name: Build & Sync
