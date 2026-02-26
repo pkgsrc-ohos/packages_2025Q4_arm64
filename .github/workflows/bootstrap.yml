@@ -44,7 +44,7 @@ jobs:
 
       - name: Install pkgin
         run: |
-          cd /opt/pkgsrc/bootstrap/pkgtools/pkgin
+          cd /opt/pkgsrc/pkgtools/pkgin
           /storage/Users/currentUser/.pkg/bin/bmake install
 
       - name: Pack Bootstrap Kit
