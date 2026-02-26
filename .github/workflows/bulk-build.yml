@@ -3,10 +3,10 @@ name: bulk-build
 on:
   workflow_dispatch:
 
+permissions: write-all
+
 jobs:
   build:
-    permissions:
-      contents: write
     strategy:
       max-parallel: 20
       fail-fast: false

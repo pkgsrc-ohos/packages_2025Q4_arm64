@@ -3,6 +3,8 @@ name: bootstrap
 on:
   workflow_dispatch:
 
+permissions: write-all
+
 jobs:
   build:
     runs-on: ubuntu-24.04-arm
@@ -42,12 +44,12 @@ jobs:
 
       - name: Pack Bootstrap Kit
         run: |
-          tar -czpf bootstrap.tar.gz /storage/Users/currentUser/.pkg
+          tar -czpf "bootstrap-ohos-2025Q4-arm64-$(date +%Y%m%d).tar.gz" -C / storage/Users/currentUser/.pkg
 
       - name: Upload Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: bootstrap
-          files: bootstrap.tar.gz
+          files: bootstrap-ohos-2025Q4-arm64-*.tar.gz
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
