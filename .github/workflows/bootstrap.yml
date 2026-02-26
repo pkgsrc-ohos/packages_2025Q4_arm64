@@ -44,6 +44,7 @@ jobs:
 
       - name: Install pkgin
         run: |
+          export MAKEFLAGS="MAKE_JOBS=$(nproc)"
           cd /opt/pkgsrc/pkgtools/pkgin
           /storage/Users/currentUser/.pkg/bin/bmake install
 
