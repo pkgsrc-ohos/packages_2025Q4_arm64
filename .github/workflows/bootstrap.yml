@@ -18,12 +18,12 @@ jobs:
           tar -zxf node-v24.2.0-openharmony-arm64.tar.gz -C /opt
           ln -s /opt/node-v24.2.0-openharmony-arm64/bin/node /__e/node20/bin/node
 
+      - name: Checkout
+        uses: actions/checkout@v4
+
       - name: Setup Toolchain
         run: |
           ./setup-toolchain.sh
-
-      - name: Checkout
-        uses: actions/checkout@v4
 
       - name: Clone pkgsrc
         run: |
