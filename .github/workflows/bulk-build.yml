@@ -47,6 +47,8 @@ jobs:
           curl -L -O https://github.com/${{ github.repository }}/releases/download/bootstrap/bootstrap-ohos-2025Q4-arm64-20260226.tar.gz
           tar -xzpf bootstrap-ohos-2025Q4-arm64-20260226.tar.gz -C /
           echo "/storage/Users/currentUser/.pkg/bin:/storage/Users/currentUser/.pkg/sbin" >> $GITHUB_PATH
+          mkdir -p /storage/Users/currentUser/.pkg/etc/pkgin
+          echo "https://github.com/${{ github.repository }}/releases/download/pkg_summary/" > /storage/Users/currentUser/.pkg/etc/pkgin/repositories.conf
 
       - name: Build & Sync
         env:
@@ -58,49 +60,58 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
           cd ../main_repo
 
-          # 遍历当前桶对应的软件包
-          grep -E "^[^/]*/${{ matrix.bucket == '0-9' && '[0-9]' || matrix.bucket }}" whitelist.txt | while read pkg_path; do
-            
-            # 1. 提取包的基本信息 (需在 pkgsrc 目录下)
-            # 假设 /opt/pkgsrc 已经准备好
+          # 筛选当前桶的任务
+          TARGET_PKGS=$(grep -E "^[^/]*/${{ matrix.bucket == '0-9' && '[0-9]' || matrix.bucket }}" whitelist.txt || true)
+          
+          for pkg_path in $TARGET_PKGS; do
             cd /opt/pkgsrc/$pkg_path
-            PKGBASE=$(make show-var VARNAME=PKGBASE)
-            PKGNAME=$(make show-var VARNAME=PKGNAME) # 包含版本号
             
-            # 2. 判断是否需要构建
-            # 检查 metadata/字母/ 下是否有这个精确版本的 .meta
-            if [ -f "../../../metadata_repo/${BUCKET}/${PKGNAME}.meta" ]; then
-              echo ">>> $PKGNAME is up to date. Skipping."
+            PKGBASE=$(make show-var VARNAME=PKGBASE)
+            PKGNAME=$(make show-var VARNAME=PKGNAME)
+            
+            # 1. 增量检查：是否已存在精确版本的 meta
+            if [ -f "$GITHUB_WORKSPACE/metadata_repo/${BUCKET}/${PKGNAME}.meta" ]; then
+              echo ">>> [SKIP] $PKGNAME exists."
               continue
             fi
 
-            echo ">>> New version detected: $PKGNAME. Building..."
+            echo ">>> [BUILD] Processing $PKGNAME"
 
-            # 3. 执行构建
-            if make package-install clean DEPENDS_TARGET=bin-install; then
+            # 2. 预热依赖：尝试用 pkgin 安装已有的二进制依赖，减少编译
+            sudo pkgin update || true
+            sudo pkgin -y install $(make show-vars VARNAME=DEPENDS) || true
+
+            # 3. 正式编译并打包
+            if sudo make package-install clean DEPENDS_TARGET=bin-install; then
               
-              cd ../../../metadata_repo
+              # 4. 构造完整 URL 元数据
+              TGZ_FILE="/opt/pkgsrc/packages/All/${PKGNAME}.tgz"
+              # 提取原始 meta
+              pkg_info -X "$TGZ_FILE" > temp.meta
+              # 注入 GitHub 下载直链
+              DL_URL="https://github.com/${REPO_NAME}/releases/download/pkg-${BUCKET}/${PKGNAME}.tgz"
+              sed -i "s|^FILE=.*|FILE=${DL_URL}|" temp.meta
               
-              # 4. 【关键步骤】删除该包的所有旧版本元数据
-              # 这样可以保证一个包在索引里只出现一次
+              # 5. 上传二进制包到对应的字母桶
+              gh release upload "pkg-${BUCKET}" "$TGZ_FILE" --clobber
+              
+              # 6. 同步到元数据分支（清理旧版本并存入新版本）
+              cd "$GITHUB_WORKSPACE/metadata_repo"
               rm -f "${BUCKET}/${PKGBASE}-"*.meta
+              cp "$GITHUB_WORKSPACE/main_repo/temp.meta" "${BUCKET}/${PKGNAME}.meta"
               
-              # 5. 生成新的元数据
-              /storage/Users/currentUser/.pkg/sbin/pkg_info -X "/opt/pkgsrc/packages/All/${PKGNAME}.tgz" > "${BUCKET}/${PKGNAME}.meta"
-              
-              # 6. 上传二进制包到 Release
-              gh release upload "pkg-${BUCKET}" "/opt/pkgsrc/packages/All/${PKGNAME}.tgz" --clobber
-
-              # 7. 提交并重试推送
-              git add "${BUCKET}/"
+              git add .
               git commit -m "Update $PKGBASE to $PKGNAME"
               
+              # 并发推送冲突处理
+              RETRY_COUNT=0
               until git pull --rebase origin metadata && git push origin metadata; do
-                echo "Conflict detected, retrying..."
+                RETRY_COUNT=$((RETRY_COUNT + 1))
+                [ $RETRY_COUNT -gt 5 ] && exit 1
                 sleep $(( (RANDOM % 10) + 1 ))
               done
               
-              cd ../main_repo
+              cd "$GITHUB_WORKSPACE/main_repo"
             fi
           done
 

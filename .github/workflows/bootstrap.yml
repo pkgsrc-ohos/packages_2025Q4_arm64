@@ -42,6 +42,11 @@ jobs:
             --prefer-pkgsrc yes \
             --compiler clang
 
+      - name: Install pkgin
+        run: |
+          cd /opt/pkgsrc/bootstrap/pkgtools/pkgin
+          /storage/Users/currentUser/.pkg/bin/bmake install
+
       - name: Pack Bootstrap Kit
         run: |
           tar -czpf "bootstrap-ohos-2025Q4-arm64-$(date +%Y%m%d).tar.gz" -C / storage/Users/currentUser/.pkg
