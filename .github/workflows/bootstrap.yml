@@ -49,7 +49,7 @@ jobs:
 
       - name: Pack Bootstrap Kit
         run: |
-          tar -czpf "bootstrap-ohos-2025Q4-arm64-$(date +%Y%m%d).tar.gz" -C / storage/Users/currentUser/.pkg
+          tar -zcf "bootstrap-ohos-2025Q4-arm64-$(date +%Y%m%d).tar.gz" -C / storage/Users/currentUser/.pkg
 
       - name: Upload Release
         uses: softprops/action-gh-release@v2

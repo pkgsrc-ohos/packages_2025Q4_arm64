@@ -13,6 +13,10 @@ curl -fSLO https://github.com/Harmonybrew/ohos-coreutils/releases/download/9.10/
 ls | grep tar.gz$ | xargs -n 1 tar -zxf
 ln -sf $(pwd)/*-ohos-arm64/bin/* /bin/
 
+# 把 tar 和 gzip 换成 busybox 的实现，避免出现压缩率不足和压缩过程中崩溃的问题
+ln -sf /bin/busybox /bin/tar
+ln -sf /bin/busybox /bin/gzip
+
 # 准备 ohos-sdk
 sdk_download_url="https://cidownload.openharmony.cn/version/Master_Version/ohos-sdk-public_ohos/20260108_020526/version-Master_Version-ohos-sdk-public_ohos-20260108_020526-ohos-sdk-public_ohos.tar.gz"
 curl -fSL -o ohos-sdk.tar.gz $sdk_download_url

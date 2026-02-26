@@ -45,7 +45,7 @@ jobs:
       - name: Setup Bootstrap
         run: |
           curl -L -O https://github.com/${{ github.repository }}/releases/download/bootstrap/bootstrap-ohos-2025Q4-arm64-20260226.tar.gz
-          tar -xzpf bootstrap-ohos-2025Q4-arm64-20260226.tar.gz -C /
+          tar -zxf bootstrap-ohos-2025Q4-arm64-20260226.tar.gz -C /
           echo "/storage/Users/currentUser/.pkg/bin:/storage/Users/currentUser/.pkg/sbin" >> $GITHUB_PATH
           mkdir -p /storage/Users/currentUser/.pkg/etc/pkgin
           echo "https://github.com/${{ github.repository }}/releases/download/pkg_summary/" > /storage/Users/currentUser/.pkg/etc/pkgin/repositories.conf
@@ -78,11 +78,11 @@ jobs:
             echo ">>> [BUILD] Processing $PKGNAME"
 
             # 2. 预热依赖：尝试用 pkgin 安装已有的二进制依赖，减少编译
-            sudo pkgin update || true
-            sudo pkgin -y install $(make show-vars VARNAME=DEPENDS) || true
+            pkgin update || true
+            pkgin -y install $(make show-vars VARNAME=DEPENDS) || true
 
             # 3. 正式编译并打包
-            if sudo make package-install clean DEPENDS_TARGET=bin-install; then
+            if make package-install clean DEPENDS_TARGET=bin-install; then
               
               # 4. 构造完整 URL 元数据
               TGZ_FILE="/opt/pkgsrc/packages/All/${PKGNAME}.tgz"
