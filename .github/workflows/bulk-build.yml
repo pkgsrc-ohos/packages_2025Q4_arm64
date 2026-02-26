@@ -1,0 +1,128 @@
+name: bulk-build
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    permissions:
+      contents: write
+    strategy:
+      max-parallel: 20
+      fail-fast: false
+      matrix:
+        bucket: [a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p, q, r, s, t, u, v, w, x, y, z, 0-9]
+    runs-on: ubuntu-24.04-arm
+    container:
+      image: ghcr.io/hqzing/docker-mini-openharmony:latest
+      volumes:
+        - /opt/node20:/__e/node20:rw,rshared
+    steps:
+      - name: Setup node for actions
+        run: |
+          curl -L -O https://github.com/hqzing/ohos-node/releases/download/v24.2.0/node-v24.2.0-openharmony-arm64.tar.gz
+          mkdir /__e/node20/bin
+          tar -zxf node-v24.2.0-openharmony-arm64.tar.gz -C /opt
+          ln -s /opt/node-v24.2.0-openharmony-arm64/bin/node /__e/node20/bin/node
+
+      - name: Setup Toolchain
+        run: |
+          ./setup-toolchain.sh
+
+      - name: Checkout Source
+        uses: actions/checkout@v4
+        with:
+          path: main_repo
+
+      - name: Checkout Metadata Branch
+        uses: actions/checkout@v4
+        with:
+          ref: metadata
+          path: metadata_repo
+
+      - name: Setup Bootstrap
+        run: |
+          curl -L -O https://github.com/${{ github.repository }}/releases/download/bootstrap/bootstrap.tar.gz
+          tar -xzpf bootstrap.tar.gz -C /
+          echo "/storage/Users/currentUser/.pkg/bin:/storage/Users/currentUser/.pkg/sbin" >> $GITHUB_PATH
+
+      - name: Build & Sync
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          BUCKET: ${{ matrix.bucket }}
+        run: |
+          cd metadata_repo
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          cd ../main_repo
+
+          # 遍历当前桶对应的软件包
+          grep -E "^[^/]*/${{ matrix.bucket == '0-9' && '[0-9]' || matrix.bucket }}" whitelist.txt | while read pkg_path; do
+            
+            # 1. 提取包的基本信息 (需在 pkgsrc 目录下)
+            # 假设 /opt/pkgsrc 已经准备好
+            cd /opt/pkgsrc/$pkg_path
+            PKGBASE=$(make show-var VARNAME=PKGBASE)
+            PKGNAME=$(make show-var VARNAME=PKGNAME) # 包含版本号
+            
+            # 2. 判断是否需要构建
+            # 检查 metadata/字母/ 下是否有这个精确版本的 .meta
+            if [ -f "../../../metadata_repo/${BUCKET}/${PKGNAME}.meta" ]; then
+              echo ">>> $PKGNAME is up to date. Skipping."
+              continue
+            fi
+
+            echo ">>> New version detected: $PKGNAME. Building..."
+
+            # 3. 执行构建
+            if make package-install clean DEPENDS_TARGET=bin-install; then
+              
+              cd ../../../metadata_repo
+              
+              # 4. 【关键步骤】删除该包的所有旧版本元数据
+              # 这样可以保证一个包在索引里只出现一次
+              rm -f "${BUCKET}/${PKGBASE}-"*.meta
+              
+              # 5. 生成新的元数据
+              /storage/Users/currentUser/.pkg/sbin/pkg_info -X "/opt/pkgsrc/packages/All/${PKGNAME}.tgz" > "${BUCKET}/${PKGNAME}.meta"
+              
+              # 6. 上传二进制包到 Release
+              gh release upload "pkg-${BUCKET}" "/opt/pkgsrc/packages/All/${PKGNAME}.tgz" --clobber
+
+              # 7. 提交并重试推送
+              git add "${BUCKET}/"
+              git commit -m "Update $PKGBASE to $PKGNAME"
+              
+              until git pull --rebase origin metadata && git push origin metadata; do
+                echo "Conflict detected, retrying..."
+                sleep $(( (RANDOM % 10) + 1 ))
+              done
+              
+              cd ../main_repo
+            fi
+          done
+
+  generate-summary:
+    needs: build
+    if: always() # 即使部分构建失败也生成当前能生成的索引
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Metadata
+        uses: actions/checkout@v4
+        with:
+          ref: metadata
+
+      - name: Final Index Merge
+        run: |
+          # 扫描所有 .meta 文件并合并
+          # 此时每个 PKGBASE 应该只有一个最新的 .meta 文件
+          find . -name "*.meta" -exec cat {} + | gzip > pkg_summary.gz
+          
+      - name: Upload Index
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: pkg_summary
+          files: pkg_summary.gz
+          overwrite: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

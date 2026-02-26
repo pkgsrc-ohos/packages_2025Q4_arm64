@@ -1,0 +1,53 @@
+name: bootstrap
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04-arm
+    container:
+      image: ghcr.io/hqzing/docker-mini-openharmony:latest
+      volumes:
+        - /opt/node20:/__e/node20:rw,rshared
+    steps:
+      - name: Setup node for actions
+        run: |
+          curl -L -O https://github.com/hqzing/ohos-node/releases/download/v24.2.0/node-v24.2.0-openharmony-arm64.tar.gz
+          mkdir /__e/node20/bin
+          tar -zxf node-v24.2.0-openharmony-arm64.tar.gz -C /opt
+          ln -s /opt/node-v24.2.0-openharmony-arm64/bin/node /__e/node20/bin/node
+
+      - name: Setup Toolchain
+        run: |
+          ./setup-toolchain.sh
+
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Clone pkgsrc
+        run: |
+          cd /opt
+          git clone --depth 1 -b pkgsrc-2025Q4 https://github.com/pkgsrc-ohos/pkgsrc.git
+
+      - name: Bootstrap
+        run: |
+          cd /opt/pkgsrc/bootstrap
+          ./bootstrap \
+            --prefix /storage/Users/currentUser/.pkg \
+            --varbase /storage/Users/currentUser/.pkg/var \
+            --pkgdbdir /storage/Users/currentUser/.pkg/pkgdb \
+            --prefer-pkgsrc yes \
+            --compiler clang
+
+      - name: Pack Bootstrap Kit
+        run: |
+          tar -czpf bootstrap.tar.gz /storage/Users/currentUser/.pkg
+
+      - name: Upload Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: bootstrap
+          files: bootstrap.tar.gz
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
