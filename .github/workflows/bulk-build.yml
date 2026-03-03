@@ -14,7 +14,7 @@ jobs:
         bucket: [a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p, q, r, s, t, u, v, w, x, y, z, 0-9]
     runs-on: ubuntu-24.04-arm
     container:
-      image: ghcr.io/pkgsrc-ohos/ci-runner:main
+      image: ghcr.io/pkgsrc-ohos/ci-runner:latest
       volumes:
         - /opt/node20:/__e/node20:rw,rshared
     steps:
