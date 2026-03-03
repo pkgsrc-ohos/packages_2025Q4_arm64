@@ -109,11 +109,13 @@ for p_path in $TARGET_LIST; do
     if [ -n "$RAW_DEPS" ]; then
         pkgin -y update || true
         for dep_path in $RAW_DEPS; do
-            DEP_BASE=$(basename "$dep_path")
-            pkgin -y install "$DEP_BASE" || true
+            FULL_DEP_PATH="/opt/pkgsrc/$dep_path"
+            if [ -d "$FULL_DEP_PATH" ]; then
+                DEP_BASE=$(cd "$FULL_DEP_PATH" && bmake show-var VARNAME=PKGBASE)
+                pkgin -y install "$DEP_BASE" || true
+            fi
         done
     fi
-
 
     # 执行构建，失败则回退路径并跳过
     echo ">>> [BUILD] Compiling $P_NAME..."
