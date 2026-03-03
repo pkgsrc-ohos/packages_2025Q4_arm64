@@ -1,0 +1,41 @@
+name: create-buckets
+
+on:
+  workflow_dispatch:
+
+jobs:
+  create-buckets:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Create Buckets and Initialize Metadata
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # 定义创建桶的函数
+          create_bucket() {
+              local TAG_NAME=$1
+              local BODY_TEXT=$2
+
+              # 如果 Release 不存在则创建
+              if ! gh release view "$TAG_NAME" >/dev/null 2>&1; then
+                  echo ">>> Creating: $TAG_NAME"
+                  gh release create "$TAG_NAME" --title "$TAG_NAME" --notes "$BODY_TEXT" --target "main"
+              else
+                  echo ">>> Release $TAG_NAME already exists."
+              fi
+          }
+
+          BUCKETS="a b c d e f g h i j k l m n o p q r s t u v w x y z 0-9"
+          for bucket in $BUCKETS; do
+              create_bucket "bucket-$bucket" "分片桶：存储以 $bucket 开头的软件包制品"
+          done
+
+          create_bucket "pkg_summary" "统一索引桶：存储所有分块的包索引及汇总索引"
+
+          create_bucket "bootstrap" "Bootstrap kit（引导套件）"

@@ -1,0 +1,61 @@
+name: bulk-build
+
+on:
+  workflow_dispatch:
+
+permissions: write-all
+
+jobs:
+  build:
+    strategy:
+      max-parallel: 20
+      fail-fast: false
+      matrix:
+        bucket: [a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p, q, r, s, t, u, v, w, x, y, z, 0-9]
+    runs-on: ubuntu-24.04-arm
+    container:
+      image: ghcr.io/pkgsrc-ohos/ci-runner:main
+      volumes:
+        - /opt/node20:/__e/node20:rw,rshared
+    steps:
+      - name: Setup node for actions
+        run: |
+          curl -L -O https://github.com/hqzing/ohos-node/releases/download/v24.2.0/node-v24.2.0-openharmony-arm64.tar.gz
+          mkdir -p /__e/node20/bin
+          tar -zxf node-v24.2.0-openharmony-arm64.tar.gz -C /opt
+          ln -sf /opt/node-v24.2.0-openharmony-arm64/bin/node /__e/node20/bin/node
+
+      - name: Checkout Source
+        uses: actions/checkout@v4
+
+      - name: Bulk Build
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          BUCKET: ${{ matrix.bucket }}
+          REPO_NAME: ${{ github.repository }}
+        run: ./bulk-build.sh
+
+  aggregate:
+    if: always()
+    needs: build
+    runs-on: ubuntu-latest
+    env:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - name: Aggregate All Package Summaries
+        run: |
+          SUMMARY_TAG="pkg_summary"
+
+          # 1. 下载分块索引
+          echo ">>> Downloading all shard indexes..."
+          mkdir -p parts
+          gh release download "$SUMMARY_TAG" -p "pkg_summary_*.gz" -D parts --repo "$GITHUB_REPOSITORY"
+
+          # 2. 合并索引（分块间无重复，直接解压合并即可）
+          echo ">>> Merging shard indexes..."
+          find parts -name "pkg_summary_*.gz" -exec gunzip -c {} + > pkg_summary
+          gzip -c pkg_summary > pkg_summary.gz
+
+          # 3. 上传最终汇总索引到 pkg_summary 桶
+          echo ">>> Uploading consolidated pkg_summary.gz..."
+          gh release upload "$SUMMARY_TAG" pkg_summary.gz --clobber --repo "$GITHUB_REPOSITORY"

@@ -1,0 +1,35 @@
+name: bootstrap
+
+on:
+  workflow_dispatch:
+
+permissions: write-all
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04-arm
+    container:
+      image: ghcr.io/pkgsrc-ohos/ci-runner:main
+      volumes:
+        - /opt/node20:/__e/node20:rw,rshared
+    steps:
+      - name: Setup node for actions
+        run: |
+          curl -L -O https://github.com/hqzing/ohos-node/releases/download/v24.2.0/node-v24.2.0-openharmony-arm64.tar.gz
+          mkdir /__e/node20/bin
+          tar -zxf node-v24.2.0-openharmony-arm64.tar.gz -C /opt
+          ln -s /opt/node-v24.2.0-openharmony-arm64/bin/node /__e/node20/bin/node
+
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Bootstrap
+        run: ./bootstrap.sh
+
+      - name: Upload Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: bootstrap
+          files: bootstrap-ohos-2025Q4-arm64-*.tar.gz
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

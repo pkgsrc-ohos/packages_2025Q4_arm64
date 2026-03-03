@@ -1,0 +1,64 @@
+name: cleanup-redundant-assets
+
+on:
+  workflow_dispatch:
+
+permissions: write-all
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    env:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - name: Cleanup Redundant Binaries
+        run: |
+          SUMMARY_TAG="pkg_summary"
+          REPO="${{ github.repository }}"
+
+          echo ">>> Fetching all index files from $SUMMARY_TAG..."
+          mkdir -p shard_indexes
+          gh release download "$SUMMARY_TAG" -p "pkg_summary_*.gz" -D shard_indexes --repo "$REPO"
+
+          # 1. 解析所有索引文件，提取所有合法的 PKG_URL 对应的文件名
+          # 索引中可能有 PKG_URL=https://.../bucket-a/foo-1.0.tgz
+          echo ">>> Parsing valid package list from indexes..."
+          find shard_indexes -name "*.gz" -exec gunzip -c {} + | \
+            grep "^PKG_URL=" | sed 's|.*/||' | sort -u > valid_packages.txt
+
+          # 2. 遍历所有的分块桶 (bucket-a 到 bucket-z, 以及 bucket-0-9)
+          BUCKETS=$(echo {a..z} 0-9)
+
+          for b in $BUCKETS; do
+            TAG="bucket-$b"
+            echo ">>> Checking $TAG..."
+
+            # 获取该 Release 下的所有文件列表
+            gh release view "$TAG" --repo "$REPO" --json assets --jq '.assets[].name' > current_assets.txt
+
+            # 过滤出二进制包 (.tgz)，排除索引文件等其他干扰
+            grep "\.tgz$" current_assets.txt > current_packages.txt || true
+
+            if [ ! -s current_packages.txt ]; then
+              echo "    No packages found in $TAG."
+              continue
+            fi
+
+            # 3. 找出在当前 Release 中存在、但在索引列表中不存在的文件 (冗余文件)
+            # comm -23 找出只在 current 中有的文件
+            grep -Fvxf valid_packages.txt current_packages.txt > redundant_files.txt || true
+
+            if [ -s redundant_files.txt ]; then
+              echo ">>> [FOUND] Redundant assets in $TAG:"
+              cat redundant_files.txt
+
+              while read -r file; do
+                echo "    [DELETE] Deleting: $file from $TAG"
+                gh release delete-asset "$TAG" "$file" --repo "$REPO" -y
+              done < redundant_files.txt
+            else
+              echo "    No redundant assets found in $TAG."
+            fi
+          done
+
+          echo ">>> [FINISHED] Cleanup task completed."
