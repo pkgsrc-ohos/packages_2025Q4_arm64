@@ -27,10 +27,7 @@ export PATH=/storage/Users/currentUser/.pkg/bin:/storage/Users/currentUser/.pkg/
 
 # 需要预置在 bootstrap kit 里面的软件包
 PACKAGES="pkgtools/pkgin
-security/mozilla-rootcerts
-archivers/gtar-base
-archivers/zip
-archivers/unzip"
+security/mozilla-rootcerts"
 
 # 循环构建它们，产生的包会存放在 /opt/pkgsrc/packages/All
 # 此时 .pkg 目录里面会带有大量构建期依赖
@@ -46,7 +43,7 @@ mv /storage/Users/currentUser/.pkg-backup /storage/Users/currentUser/.pkg
 # 通过二进制安装的方式，把这些预置包装到“干净”的目录里面，
 # 此时 .pkg 里面只会携带它们的运行期依赖，不会携带构建期依赖
 export PKG_PATH="/opt/pkgsrc/packages/All"
-pkg_add pkgin mozilla-rootcerts gtar-base zip unzip
+pkg_add pkgin mozilla-rootcerts
 
 # 预置 ssl 证书到 .pkg 目录中，随包分发
 mozilla-rootcerts install
@@ -67,6 +64,14 @@ echo $REPO_URL > $CONF_FILE
 
 # 删除多余的状态文件
 rm -r /storage/Users/currentUser/.pkg/pkgdb.refcount
+
+# 临时编译一个 zip，用来打包 zip 格式的 bootstrap kit
+# 为保障 bootstarp kit 干净，这里没有用 pkgsrc 里面的 zip，而是自己另拿源码编一个
+cd $WORKDIR
+curl -fSLO https://downloads.sourceforge.net/project/infozip/Zip%203.x%20%28latest%29/3.0/zip30.tar.gz
+tar -zxf zip30.tar.gz
+cd zip30
+bmake -f unix/Makefile install BINDIR=/bin
 
 # 打包
 cd $WORKDIR
