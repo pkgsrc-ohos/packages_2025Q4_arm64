@@ -30,6 +30,6 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: bootstrap
-          files: bootstrap-ohos-2025Q4-arm64-*.tar.gz
+          files: bootstrap-ohos-2025Q4-arm64-*
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

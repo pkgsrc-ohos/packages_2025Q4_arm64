@@ -22,23 +22,31 @@ sed -i '/.endif/i PKG_DEFAULT_OPTIONS+=\topenssl' /storage/Users/currentUser/.pk
 # 把“干净”的 .pkg 目录复制一份备份起来
 cp -r /storage/Users/currentUser/.pkg /storage/Users/currentUser/.pkg-backup
 
-# 将 pkgin 和 mozilla-rootcerts 构建成二进制包，二进制包会生成在 /opt/pkgsrc/packages/All，
-# 此时 .pkg 目录里面会带有大量构建期依赖
 export MAKEFLAGS="MAKE_JOBS=$(nproc)"
 export PATH=/storage/Users/currentUser/.pkg/bin:/storage/Users/currentUser/.pkg/sbin:$PATH
-cd /opt/pkgsrc/pkgtools/pkgin
-bmake package
-cd /opt/pkgsrc/security/mozilla-rootcerts
-bmake package
+
+# 需要预置在 bootstrap kit 里面的软件包
+PACKAGES="pkgtools/pkgin
+security/mozilla-rootcerts
+archivers/gtar-base
+archivers/zip
+archivers/unzip"
+
+# 循环构建它们，产生的包会存放在 /opt/pkgsrc/packages/All
+# 此时 .pkg 目录里面会带有大量构建期依赖
+for pkg in $PACKAGES; do
+    cd "/opt/pkgsrc/$pkg"
+    bmake package clean
+done
 
 # 把这个“脏了”的 .pkg 目录删掉，再把“干净”的 .pkg 目录移回来
 rm -r /storage/Users/currentUser/.pkg
 mv /storage/Users/currentUser/.pkg-backup /storage/Users/currentUser/.pkg
 
-# 通过二进制安装的方式，把 pkgin 和 mozilla-rootcerts 装到“干净”的目录里面，
+# 通过二进制安装的方式，把这些预置包装到“干净”的目录里面，
 # 此时 .pkg 里面只会携带它们的运行期依赖，不会携带构建期依赖
 export PKG_PATH="/opt/pkgsrc/packages/All"
-pkg_add pkgin mozilla-rootcerts
+pkg_add pkgin mozilla-rootcerts gtar-base zip unzip
 
 # 预置 ssl 证书到 .pkg 目录中，随包分发
 mozilla-rootcerts install
@@ -63,3 +71,5 @@ rm -r /storage/Users/currentUser/.pkg/pkgdb.refcount
 # 打包
 cd $WORKDIR
 tar -zcf "bootstrap-ohos-2025Q4-arm64-$(date +%Y%m%d).tar.gz" -C / storage/Users/currentUser/.pkg
+cd /
+zip -ryX "$WORKDIR/bootstrap-ohos-2025Q4-arm64-$(date +%Y%m%d).zip" storage/Users/currentUser/.pkg
