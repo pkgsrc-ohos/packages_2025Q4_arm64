@@ -48,7 +48,7 @@ find /storage/Users/currentUser/.pkg -type f | while read -r FILE; do
     if file -b "$FILE" | grep -iqE "ELF|shared object"; then
         echo ">>> Signing: $FILE"
         binary-sign-tool sign -inFile $FILE -outFile $FILE -selfSign 1
-	chmod 0755 $FILE
+        chmod 0755 $FILE
     fi
 done
 
