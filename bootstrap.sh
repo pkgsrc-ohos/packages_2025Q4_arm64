@@ -63,7 +63,7 @@ CONF_FILE="/storage/Users/currentUser/.pkg/etc/pkgin/repositories.conf"
 echo $REPO_URL > $CONF_FILE
 
 # 删除多余的状态文件
-rm -r /storage/Users/currentUser/.pkg/pkgdb.refcount
+#rm -r /storage/Users/currentUser/.pkg/pkgdb.refcount
 
 # 临时编译一个 zip，用来打包 zip 格式的 bootstrap kit
 # 为保障 bootstarp kit 干净，这里没有用 pkgsrc 里面的 zip，而是自己另拿源码编一个
