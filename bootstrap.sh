@@ -57,9 +57,9 @@ REPO_URL="https://ghfast.top/https://github.com/pkgsrc-ohos/packages_2025Q4_arm6
 CONF_FILE="/storage/Users/currentUser/.pkg/etc/pkgin/repositories.conf"
 echo $REPO_URL > $CONF_FILE
 
-# 打包（尝试用toybox的tar压缩看看是否有兼容性问题）
-ln -sf /bin/toybox /bin/tar
+# 删除多余的状态文件
 rm -r /storage/Users/currentUser/.pkg/pkgdb.refcount
-cd /storage/Users/currentUser
-tar -zcf "bootstrap-ohos-2025Q4-arm64-$(date +%Y%m%d).tar.gz" .pkg
-mv "bootstrap-ohos-2025Q4-arm64-$(date +%Y%m%d).tar.gz" $WORKDIR
+
+# 打包
+cd $WORKDIR
+tar -zcf "bootstrap-ohos-2025Q4-arm64-$(date +%Y%m%d).tar.gz" -C / storage/Users/currentUser/.pkg
