@@ -65,8 +65,8 @@ echo $REPO_URL > $CONF_FILE
 # 删除多余的状态文件
 #rm -r /storage/Users/currentUser/.pkg/pkgdb.refcount
 
-# 临时编译一个 zip，用来打包 zip 格式的 bootstrap kit
-# 为保障 bootstarp kit 干净，这里没有用 pkgsrc 里面的 zip，而是自己另拿源码编一个
+# 临时编译一个 zip，装到 /bin 目录下，用来打包 zip 格式的 bootstrap kit
+# 为保障 bootstarp kit 干净，这里没有用 pkgsrc 源码树里面的 zip，而是自己另拿源码编一个
 cd $WORKDIR
 curl -fSLO https://downloads.sourceforge.net/project/infozip/Zip%203.x%20%28latest%29/3.0/zip30.tar.gz
 tar -zxf zip30.tar.gz
