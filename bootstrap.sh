@@ -57,7 +57,7 @@ find /storage/Users/currentUser/.pkg -type f | while read -r FILE; do
     fi
 done
 
-# 改 pkgin 的配置文件，把默认源设置成 github 链接，并使用 ghfast.top 作为加速镜像地址
+# 改 pkgin 的配置文件，把默认源设置成 github 链接，并使用 ghfast.top 作为镜像站
 REPO_URL="https://ghfast.top/https://github.com/pkgsrc-ohos/packages_2025Q4_arm64/releases/download/pkg_summary"
 CONF_FILE="/storage/Users/currentUser/.pkg/etc/pkgin/repositories.conf"
 echo $REPO_URL > $CONF_FILE
