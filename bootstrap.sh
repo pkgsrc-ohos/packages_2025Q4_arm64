@@ -60,4 +60,5 @@ echo $REPO_URL > $CONF_FILE
 # 打包（尝试用toybox的tar压缩看看是否有兼容性问题）
 cd $WORKDIR
 ln -sf /bin/toybox /bin/tar
+rm -r /storage/Users/currentUser/.pkg/pkgdb.refcount
 tar -zcf "bootstrap-ohos-2025Q4-arm64-$(date +%Y%m%d).tar.gz" -C / storage/Users/currentUser/.pkg
