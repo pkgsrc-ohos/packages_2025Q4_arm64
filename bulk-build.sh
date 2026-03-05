@@ -134,6 +134,15 @@ for p_path in $TARGET_LIST; do
 
     # --- 7. 上传与索引更新 ---
 
+    # 检查并删除已存在的同名二进制包（实现覆盖）
+    EXISTING_ASSET_ID=$(echo "$RELEASE_JSON" | grep -B 2 "\"name\": \"$P_NAME.tgz\"" | grep '"id":' | sed 's/[^0-9]//g' | head -1)
+
+    if [ -n "$EXISTING_ASSET_ID" ]; then
+        echo ">>> [OVERWRITE] Removing existing asset $P_NAME.tgz (ID: $EXISTING_ASSET_ID)"
+        curl -s -X DELETE -H "Authorization: Bearer $GITHUB_TOKEN" \
+            "https://api.github.com/repos/$REPO_NAME/releases/assets/$EXISTING_ASSET_ID"
+    fi
+
     # 上传二进制包
     echo ">>> [UPLOAD] Binary: $P_NAME.tgz"
     curl -s -H "Authorization: Bearer $GITHUB_TOKEN" \
