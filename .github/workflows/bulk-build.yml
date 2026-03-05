@@ -55,7 +55,7 @@ jobs:
           # 镜像站的配置在这里做，以便于镜像站失效后更换镜像站
           echo ">>> Merging shard indexes..."
           find parts -name "pkg_summary_*.gz" -exec gunzip -c {} + > pkg_summary
-          sed -i "s@PKG_URL=https://github.com/@PKG_URL=https://ghfast.top/https://github.com/@g"
+          sed -i "s@PKG_URL=https://github.com/@PKG_URL=https://ghfast.top/https://github.com/@g" pkg_summary
           gzip -c pkg_summary > pkg_summary.gz
 
           # 3. 上传最终汇总索引到 pkg_summary 桶
